@@ -1,5 +1,5 @@
 import { readFileSync } from "fs";
-import { descending, logAndAssert, sum } from "../../js_lib/index.js";
+import { descending, logAndAssert, sum } from "../../ts_lib";
 
 const main = () => {
   const input = readFileSync("../input.txt", "utf8");

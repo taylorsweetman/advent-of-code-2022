@@ -1,13 +1,17 @@
 import { readFileSync } from "fs";
-import { logAndAssert, sum } from "../../js_lib/index.js";
+import { logAndAssert, sum } from "../../ts_lib";
 
-const OPPONENT_MAP = {
+type Selection = "rock" | "paper" | "scissors";
+type OppInput = "A" | "B" | "C";
+type UserInput = "X" | "Y" | "Z";
+
+const OPPONENT_MAP: { [x: string]: Selection } = {
   A: "rock",
   B: "paper",
   C: "scissors",
 };
 
-const getRoundScore = (them, you) => {
+const getRoundScore = (them: Selection, you: Selection) => {
   const WINNER_PTS_MAP = {
     rock_paper: 6,
     rock_scissors: 0,
@@ -29,8 +33,11 @@ const getRoundScore = (them, you) => {
   return WINNER_PTS_MAP[`${them}_${you}`] + SELECTION_PTS_MAP[you];
 };
 
-const roundOneSelector = (them, you) => {
-  const ENCRYPTION_MAP_1 = {
+const roundOneSelector = (
+  them: OppInput,
+  you: UserInput
+): [Selection, Selection] => {
+  const ENCRYPTION_MAP_1: { [x: string]: Selection } = {
     X: "rock",
     Y: "paper",
     Z: "scissors",
@@ -38,7 +45,10 @@ const roundOneSelector = (them, you) => {
   return [OPPONENT_MAP[them], ENCRYPTION_MAP_1[you]];
 };
 
-const roundTwoSelector = (them, you) => {
+const roundTwoSelector = (
+  them: OppInput,
+  you: UserInput
+): [Selection, Selection] => {
   const ENCRYPTION_MAP_2 = {
     X: 0,
     Y: 3,
@@ -72,7 +82,11 @@ const roundTwoSelector = (them, you) => {
 };
 
 const rawSelectionsToTotalScore =
-  (rawInput) => (scoreCalc) => (selectionFinder) => {
+  (rawInput: [OppInput, UserInput][]) =>
+  (scoreCalc: (them: Selection, you: Selection) => number) =>
+  (
+    selectionFinder: (them: OppInput, you: UserInput) => [Selection, Selection]
+  ) => {
     return sum(
       rawInput
         .map(([them, you]) => selectionFinder(them, you))
@@ -82,7 +96,10 @@ const rawSelectionsToTotalScore =
 
 const main = () => {
   const input = readFileSync("../input.txt", "utf8");
-  const rawSelections = input.split("\n").map((line) => line.split(" "));
+  const rawSelections = input.split("\n").map((line) => line.split(" ")) as [
+    OppInput,
+    UserInput
+  ][];
   const scoreFromSelections =
     rawSelectionsToTotalScore(rawSelections)(getRoundScore);
 

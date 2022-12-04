@@ -1,5 +1,5 @@
 import { readFileSync } from "fs";
-import { logAndAssert } from "../../js_lib";
+import { logAndAssert } from "../../ts_lib";
 
 const fullyContained = (
   [lStart, lEnd]: [number, number],
