@@ -2,16 +2,16 @@ import { readFileSync } from "fs";
 import _ from "lodash";
 import { isUpperCase, logAndAssert, sum } from "../../js_lib/index.js";
 
-const findDup = (sets) => {
+const findDup = (sets: Set<String>[]) => {
   const [first, ...others] = sets;
 
   return [...first].reduce(
     (acc, item) => (others.every((set) => set.has(item)) ? item : acc),
-    null
+    ""
   );
 };
 
-const itemPriority = (item) =>
+const itemPriority = (item: String) =>
   isUpperCase(item) ? item.charCodeAt(0) - 38 : item.charCodeAt(0) - 96;
 
 const main = () => {
