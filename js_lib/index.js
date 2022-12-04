@@ -10,3 +10,5 @@ export const logAndAssert = (actual, expected) => {
   console.log({ actual, expected });
   assert(actual === expected);
 };
+
+export const isUpperCase = (char) => char === char.toUpperCase();
