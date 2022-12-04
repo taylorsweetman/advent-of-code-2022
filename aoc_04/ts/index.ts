@@ -1,13 +1,17 @@
 import { readFileSync } from "fs";
 import { logAndAssert } from "../../ts_lib";
 
-const fullyContained = (
-  [lStart, lEnd]: [number, number],
-  [rStart, rEnd]: [number, number]
-) => (lStart <= rStart && lEnd >= rEnd) || (rStart <= lStart && rEnd >= lEnd);
-
 const isBetweenPoints = (num: number, [start, end]: [number, number]) =>
   num >= start && num <= end;
+
+const fullyContained = (l: [number, number], r: [number, number]) => {
+  const [lStart, lEnd] = l;
+  const [rStart, rEnd] = r;
+  return (
+    (isBetweenPoints(lStart, r) && isBetweenPoints(lEnd, r)) ||
+    (isBetweenPoints(rStart, l) && isBetweenPoints(rEnd, l))
+  );
+};
 
 const overlaps = (l: [number, number], r: [number, number]) => {
   const [lStart, lEnd] = l;
