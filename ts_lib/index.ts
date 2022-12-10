@@ -1,4 +1,6 @@
 import { assert } from "console";
+import { readFileSync } from "fs";
+import { resolve } from "path";
 
 export const sum = (arr: number[]) => arr.reduce((a, b) => a + b, 0);
 
@@ -12,3 +14,6 @@ export const logAndAssert = (actual: any, expected: any) => {
 };
 
 export const isUpperCase = (char: string) => char === char.toUpperCase();
+
+export const readInput = (dirname: string) =>
+  readFileSync(resolve(dirname, "../input.txt"), "utf8");
