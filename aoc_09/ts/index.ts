@@ -49,14 +49,6 @@ const parse = (input: string): [number, number][] => {
 let rope = [
   [0, 0],
   [0, 0],
-  [0, 0],
-  [0, 0],
-  [0, 0],
-  [0, 0],
-  [0, 0],
-  [0, 0],
-  [0, 0],
-  [0, 0],
 ] as [number, number][];
 let locations = [_.last(rope)] as [number, number][];
 
@@ -71,12 +63,15 @@ const moveOne = (motion: [number, number]) => {
     const xDiff = rope[i][0] - tailX;
     const yDiff = rope[i][1] - tailY;
 
-    if (Math.abs(xDiff) > 1 && Math.abs(yDiff) > 0) {
-      // diagonal 1
-      rope[i + 1] = [xDiff > 0 ? tailX + 1 : tailX - 1, rope[i][1]];
-    } else if (Math.abs(xDiff) > 0 && Math.abs(yDiff) > 1) {
-      // diagonal 2
-      rope[i + 1] = [rope[i][0], yDiff > 0 ? tailY + 1 : tailY - 1];
+    if (
+      (Math.abs(xDiff) > 1 && Math.abs(yDiff) > 0) ||
+      (Math.abs(xDiff) > 0 && Math.abs(yDiff) > 1)
+    ) {
+      // diagonal
+      rope[i + 1] = [
+        xDiff > 0 ? tailX + 1 : tailX - 1,
+        yDiff > 0 ? tailY + 1 : tailY - 1,
+      ];
     } else if (xDiff > 1) {
       rope[i + 1] = [tailX + 1, tailY];
     } else if (xDiff < -1) {
@@ -108,19 +103,34 @@ const move = (motion: [number, number]) => {
     moveOne([0, -1]);
     yDelta++;
   }
-  logRope();
 };
 
 const main = () => {
   const input = readFileSync(resolve(__dirname, "../input.txt"), "utf8");
   const motions = parse(input);
-  logAndAssert(rope.length, 10);
-  logAndAssert(motions.length, 2000);
 
   // Part 1
   motions.forEach((motion) => move(motion));
-  const uniqLocations = _.uniqWith(locations, _.isEqual);
-  logAndAssert(uniqLocations.length, 0);
+  const uniqLocationsOne = _.uniqWith(locations, _.isEqual);
+  logAndAssert(uniqLocationsOne.length, 6_030);
+
+  // Part 2
+  rope = [
+    [0, 0],
+    [0, 0],
+    [0, 0],
+    [0, 0],
+    [0, 0],
+    [0, 0],
+    [0, 0],
+    [0, 0],
+    [0, 0],
+    [0, 0],
+  ];
+  locations = [[0, 0]];
+  motions.forEach((motion) => move(motion));
+  const uniqLocationsTwo = _.uniqWith(locations, _.isEqual);
+  logAndAssert(uniqLocationsTwo.length, 2_545);
 };
 
 main();
