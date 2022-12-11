@@ -13,6 +13,8 @@ type Monkey = {
 
 type Operator = "+" | "*";
 
+type ReducerFunc = (num: number, div: number) => number;
+
 const getNumFromLine = (line: string) => Number(line.match(/\d+/)?.[0] ?? "-1");
 
 const getNumsFromLine = (line: string) =>
@@ -71,9 +73,9 @@ const parse = (input: string): Record<number, Monkey> => {
   return monkeys;
 };
 
-const findReliefValue = (num: number, _: number) => Math.floor(num / 3);
+const findReliefValue: ReducerFunc = (num, _) => Math.floor(num / 3);
 
-const findReliefVauleTwo = (num: number, div: number) => div + (num % div);
+const findReliefVauleTwo: ReducerFunc = (num, div) => div + (num % div);
 
 const findWorryValue = (formula: string, val: number): number => {
   const withValInserted = formula
@@ -91,56 +93,53 @@ const findWorryValue = (formula: string, val: number): number => {
   return parsedFormula.left * parsedFormula.right;
 };
 
-const runMonkey = (
-  all: Record<number, Monkey>,
-  currentIdx: number,
-  worryReducer: (num: number, div: number) => number
-): Record<number, Monkey> => {
-  const divisor = Object.values(all).reduce(
-    (acc, current) => acc * current.testDiv,
-    1
-  );
-  const after = all[currentIdx].startItems.reduce((acc, currentItem) => {
-    const thrownFrom: Monkey = acc[currentIdx];
-    const worryUp = findWorryValue(thrownFrom.operation, currentItem);
-    const worryDown = worryReducer(worryUp, divisor);
-    const thrownTo =
-      worryDown % thrownFrom.testDiv === 0
-        ? acc[thrownFrom.trueAct]
-        : acc[thrownFrom.falseAct];
+const runMonkey =
+  (worryReducer: ReducerFunc) =>
+  (all: Record<number, Monkey>, currentIdx: number): Record<number, Monkey> => {
+    const divisor = Object.values(all).reduce(
+      (acc, current) => acc * current.testDiv,
+      1
+    );
+    const after = all[currentIdx].startItems.reduce((acc, currentItem) => {
+      const thrownFrom: Monkey = acc[currentIdx];
+      const worryUp = findWorryValue(thrownFrom.operation, currentItem);
+      const worryDown = worryReducer(worryUp, divisor);
+      const thrownTo =
+        worryDown % thrownFrom.testDiv === 0
+          ? acc[thrownFrom.trueAct]
+          : acc[thrownFrom.falseAct];
 
-    return {
-      ...acc,
-      [thrownTo.idx]: {
-        ...thrownTo,
-        startItems: [...thrownTo.startItems, worryDown],
-      },
-      [thrownFrom.idx]: {
-        ...thrownFrom,
-        numberOfInspections: thrownFrom.numberOfInspections + 1,
-        startItems: thrownFrom.startItems.slice(1),
-      },
-    };
-  }, all);
+      return {
+        ...acc,
+        [thrownTo.idx]: {
+          ...thrownTo,
+          startItems: [...thrownTo.startItems, worryDown],
+        },
+        [thrownFrom.idx]: {
+          ...thrownFrom,
+          numberOfInspections: thrownFrom.numberOfInspections + 1,
+          startItems: thrownFrom.startItems.slice(1),
+        },
+      };
+    }, all);
 
-  return after;
-};
+    return after;
+  };
 
-const runRound = (
-  all: Record<number, Monkey>,
-  worryReducer: (num: number, div: number) => number
-): Record<number, Monkey> =>
-  Object.values(all).reduce(
-    (acc, current) => runMonkey(acc, current.idx, worryReducer),
-    all
-  );
+const runRound =
+  (worryReducer: ReducerFunc) =>
+  (all: Record<number, Monkey>): Record<number, Monkey> =>
+    Object.values(all).reduce(
+      (acc, current) => runMonkey(worryReducer)(acc, current.idx),
+      all
+    );
 
 const runRounds =
   (worryReducer: (num: number, div: number) => number) =>
   (num: number, monkeys: Record<number, Monkey>): Record<number, Monkey> => {
     let current = monkeys;
     while (num > 0) {
-      current = runRound(current, worryReducer);
+      current = runRound(worryReducer)(current);
       num--;
     }
     return current;
