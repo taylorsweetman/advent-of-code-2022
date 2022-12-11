@@ -31,39 +31,33 @@ const parse = (input: string): Record<number, Monkey> => {
         if (i === 0) {
           return { ...acc, idx: getNumFromLine(current) };
         }
-
         if (i === 1) {
           return {
             ...acc,
             startItems: getNumsFromLine(current),
           };
         }
-
         if (i === 2) {
           return {
             ...acc,
             operation: current.substring(current.indexOf("=") + 2),
           };
         }
-
         if (i === 3) {
           return {
             ...acc,
             testDiv: getNumFromLine(current),
           };
         }
-
         if (i === 4) {
           return {
             ...acc,
             trueAct: getNumFromLine(current),
           };
         }
-
         if (i === 5) {
           return { ...acc, falseAct: getNumFromLine(current) };
         }
-
         return acc;
       },
       { numberOfInspections: 0 } as Monkey
@@ -100,7 +94,7 @@ const runMonkey =
       (acc, current) => acc * current.testDiv,
       1
     );
-    const after = all[currentIdx].startItems.reduce((acc, currentItem) => {
+    return all[currentIdx].startItems.reduce((acc, currentItem) => {
       const thrownFrom: Monkey = acc[currentIdx];
       const worryUp = findWorryValue(thrownFrom.operation, currentItem);
       const worryDown = worryReducer(worryUp, divisor);
@@ -122,8 +116,6 @@ const runMonkey =
         },
       };
     }, all);
-
-    return after;
   };
 
 const runRound =
@@ -136,14 +128,8 @@ const runRound =
 
 const runRounds =
   (worryReducer: (num: number, div: number) => number) =>
-  (num: number, monkeys: Record<number, Monkey>): Record<number, Monkey> => {
-    let current = monkeys;
-    while (num > 0) {
-      current = runRound(worryReducer)(current);
-      num--;
-    }
-    return current;
-  };
+  (num: number, monkeys: Record<number, Monkey>): Record<number, Monkey> =>
+    _.range(num).reduce(runRound(worryReducer), monkeys);
 
 const main = () => {
   const monkeys = parse(readInput(__dirname));
