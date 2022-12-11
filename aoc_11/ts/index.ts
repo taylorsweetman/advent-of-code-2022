@@ -11,8 +11,6 @@ type Monkey = {
   numberOfInspections: number;
 };
 
-type Operator = "+" | "*";
-
 type ReducerFunc = (num: number, div: number) => number;
 
 const getNumFromLine = (line: string) => Number(line.match(/\d+/)?.[0] ?? "-1");
