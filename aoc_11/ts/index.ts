@@ -3,9 +3,9 @@ import _ from "lodash";
 
 type Monkey = {
   idx: number;
-  startItems: bigint[];
+  startItems: number[];
   operation: string;
-  testDiv: bigint;
+  testDiv: number;
   trueAct: number;
   falseAct: number;
   numberOfInspections: number;
@@ -13,13 +13,10 @@ type Monkey = {
 
 type Operator = "+" | "*";
 
-const getBigIntFromLine = (line: string) =>
-  BigInt(line.match(/\d+/)?.[0] ?? "-1");
-
 const getNumFromLine = (line: string) => Number(line.match(/\d+/)?.[0] ?? "-1");
 
-const getBigIntsFromLine = (line: string) =>
-  line.match(/\d+/g)?.map((num) => BigInt(num)) ?? [];
+const getNumsFromLine = (line: string) =>
+  line.match(/\d+/g)?.map((num) => Number(num)) ?? [];
 
 const parse = (input: string): Record<number, Monkey> => {
   const paragraphs = input.split("\n\n");
@@ -36,7 +33,7 @@ const parse = (input: string): Record<number, Monkey> => {
         if (i === 1) {
           return {
             ...acc,
-            startItems: getBigIntsFromLine(current),
+            startItems: getNumsFromLine(current),
           };
         }
 
@@ -50,7 +47,7 @@ const parse = (input: string): Record<number, Monkey> => {
         if (i === 3) {
           return {
             ...acc,
-            testDiv: getBigIntFromLine(current),
+            testDiv: getNumFromLine(current),
           };
         }
 
@@ -74,20 +71,19 @@ const parse = (input: string): Record<number, Monkey> => {
   return monkeys;
 };
 
-const findReliefValue = (num: bigint, _: bigint) =>
-  BigInt(Math.floor(Number(num) / 3));
+const findReliefValue = (num: number, _: number) => Math.floor(num / 3);
 
-const findReliefVauleTwo = (num: bigint, div: bigint) => div + (num % div);
+const findReliefVauleTwo = (num: number, div: number) => div + (num % div);
 
-const findWorryValue = (formula: string, val: bigint): bigint => {
+const findWorryValue = (formula: string, val: number): number => {
   const withValInserted = formula
     .split(" ")
     .map((part) => (part === "old" ? val : part));
 
-  const parsedFormula: { left: bigint; op: Operator; right: bigint } = {
-    left: BigInt(withValInserted[0]),
+  const parsedFormula: { left: number; op: Operator; right: number } = {
+    left: Number(withValInserted[0]),
     op: withValInserted[1] as Operator,
-    right: BigInt(withValInserted[2]),
+    right: Number(withValInserted[2]),
   };
 
   if (parsedFormula.op === "+") return parsedFormula.left + parsedFormula.right;
@@ -98,18 +94,18 @@ const findWorryValue = (formula: string, val: bigint): bigint => {
 const runMonkey = (
   all: Record<number, Monkey>,
   currentIdx: number,
-  worryReducer: (num: bigint, div: bigint) => bigint
+  worryReducer: (num: number, div: number) => number
 ): Record<number, Monkey> => {
   const divisor = Object.values(all).reduce(
     (acc, current) => acc * current.testDiv,
-    BigInt(1)
+    1
   );
   const after = all[currentIdx].startItems.reduce((acc, currentItem) => {
     const thrownFrom: Monkey = acc[currentIdx];
     const worryUp = findWorryValue(thrownFrom.operation, currentItem);
     const worryDown = worryReducer(worryUp, divisor);
     const thrownTo =
-      worryDown % thrownFrom.testDiv === BigInt(0)
+      worryDown % thrownFrom.testDiv === 0
         ? acc[thrownFrom.trueAct]
         : acc[thrownFrom.falseAct];
 
@@ -132,7 +128,7 @@ const runMonkey = (
 
 const runRound = (
   all: Record<number, Monkey>,
-  worryReducer: (num: bigint, div: bigint) => bigint
+  worryReducer: (num: number, div: number) => number
 ): Record<number, Monkey> =>
   Object.values(all).reduce(
     (acc, current) => runMonkey(acc, current.idx, worryReducer),
@@ -140,7 +136,7 @@ const runRound = (
   );
 
 const runRounds =
-  (worryReducer: (num: bigint, div: bigint) => bigint) =>
+  (worryReducer: (num: number, div: number) => number) =>
   (num: number, monkeys: Record<number, Monkey>): Record<number, Monkey> => {
     let current = monkeys;
     while (num > 0) {
