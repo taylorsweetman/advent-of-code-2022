@@ -3,9 +3,9 @@ import _ from "lodash";
 
 type Monkey = {
   idx: number;
-  startItems: number[];
+  startItems: bigint[];
   operation: string;
-  testDiv: number;
+  testDiv: bigint;
   trueAct: number;
   falseAct: number;
   numberOfInspections: number;
@@ -13,11 +13,13 @@ type Monkey = {
 
 type Operator = "+" | "*";
 
-const getNumberFromLine = (line: string) =>
-  parseInt(line.match(/\d+/)?.[0] ?? "-1");
+const getBigIntFromLine = (line: string) =>
+  BigInt(line.match(/\d+/)?.[0] ?? "-1");
 
-const getNumbersFromLine = (line: string) =>
-  line.match(/\d+/g)?.map((num) => parseInt(num)) ?? [];
+const getNumFromLine = (line: string) => Number(line.match(/\d+/)?.[0] ?? "-1");
+
+const getBigIntsFromLine = (line: string) =>
+  line.match(/\d+/g)?.map((num) => BigInt(num)) ?? [];
 
 const parse = (input: string): Record<number, Monkey> => {
   const paragraphs = input.split("\n\n");
@@ -28,13 +30,13 @@ const parse = (input: string): Record<number, Monkey> => {
     return text.reduce(
       (acc, current, i) => {
         if (i === 0) {
-          return { ...acc, idx: getNumberFromLine(current) };
+          return { ...acc, idx: getNumFromLine(current) };
         }
 
         if (i === 1) {
           return {
             ...acc,
-            startItems: getNumbersFromLine(current),
+            startItems: getBigIntsFromLine(current),
           };
         }
 
@@ -48,19 +50,19 @@ const parse = (input: string): Record<number, Monkey> => {
         if (i === 3) {
           return {
             ...acc,
-            testDiv: getNumberFromLine(current),
+            testDiv: getBigIntFromLine(current),
           };
         }
 
         if (i === 4) {
           return {
             ...acc,
-            trueAct: getNumberFromLine(current),
+            trueAct: getNumFromLine(current),
           };
         }
 
         if (i === 5) {
-          return { ...acc, falseAct: getNumberFromLine(current) };
+          return { ...acc, falseAct: getNumFromLine(current) };
         }
 
         return acc;
@@ -72,17 +74,20 @@ const parse = (input: string): Record<number, Monkey> => {
   return monkeys;
 };
 
-const findReliefValue = (num: number) => Math.floor(num / 3);
+const findReliefValue = (num: bigint, _: bigint) =>
+  BigInt(Math.floor(Number(num) / 3));
 
-const findWorryValue = (formula: string, val: number): number => {
+const findReliefVauleTwo = (num: bigint, div: bigint) => div + (num % div);
+
+const findWorryValue = (formula: string, val: bigint): bigint => {
   const withValInserted = formula
     .split(" ")
     .map((part) => (part === "old" ? val : part));
 
-  const parsedFormula: { left: number; op: Operator; right: number } = {
-    left: Number(withValInserted[0]),
+  const parsedFormula: { left: bigint; op: Operator; right: bigint } = {
+    left: BigInt(withValInserted[0]),
     op: withValInserted[1] as Operator,
-    right: Number(withValInserted[2]),
+    right: BigInt(withValInserted[2]),
   };
 
   if (parsedFormula.op === "+") return parsedFormula.left + parsedFormula.right;
@@ -92,14 +97,19 @@ const findWorryValue = (formula: string, val: number): number => {
 
 const runMonkey = (
   all: Record<number, Monkey>,
-  currentIdx: number
+  currentIdx: number,
+  worryReducer: (num: bigint, div: bigint) => bigint
 ): Record<number, Monkey> => {
+  const divisor = Object.values(all).reduce(
+    (acc, current) => acc * current.testDiv,
+    BigInt(1)
+  );
   const after = all[currentIdx].startItems.reduce((acc, currentItem) => {
     const thrownFrom: Monkey = acc[currentIdx];
     const worryUp = findWorryValue(thrownFrom.operation, currentItem);
-    const worryDown = findReliefValue(worryUp);
+    const worryDown = worryReducer(worryUp, divisor);
     const thrownTo =
-      worryDown % thrownFrom.testDiv === 0
+      worryDown % thrownFrom.testDiv === BigInt(0)
         ? acc[thrownFrom.trueAct]
         : acc[thrownFrom.falseAct];
 
@@ -120,20 +130,32 @@ const runMonkey = (
   return after;
 };
 
-const runRound = (all: Record<number, Monkey>): Record<number, Monkey> =>
-  Object.values(all).reduce((acc, current) => runMonkey(acc, current.idx), all);
+const runRound = (
+  all: Record<number, Monkey>,
+  worryReducer: (num: bigint, div: bigint) => bigint
+): Record<number, Monkey> =>
+  Object.values(all).reduce(
+    (acc, current) => runMonkey(acc, current.idx, worryReducer),
+    all
+  );
 
-const runRounds = (
-  num: number,
-  monkeys: Record<number, Monkey>
-): Record<number, Monkey> => {
-  if (num === 0) return monkeys;
-  return runRounds(num - 1, runRound(monkeys));
-};
+const runRounds =
+  (worryReducer: (num: bigint, div: bigint) => bigint) =>
+  (num: number, monkeys: Record<number, Monkey>): Record<number, Monkey> => {
+    let current = monkeys;
+    while (num > 0) {
+      current = runRound(current, worryReducer);
+      num--;
+    }
+    return current;
+  };
 
 const main = () => {
   const monkeys = parse(readInput(__dirname));
-  const result = runRounds(20, monkeys);
+
+  // Part 1
+  const roundOneRunner = runRounds(findReliefValue);
+  const result = roundOneRunner(20, monkeys);
   const mostActive = _.orderBy(
     Object.values(result),
     "numberOfInspections",
@@ -143,7 +165,21 @@ const main = () => {
     (acc, current) => acc * current.numberOfInspections,
     1
   );
-  logAndAssert(monkeyBusiness, 10_605);
+  logAndAssert(monkeyBusiness, 100_345);
+
+  // Part 2
+  const roundTwoRunner = runRounds(findReliefVauleTwo);
+  const resultTwo = roundTwoRunner(10_000, monkeys);
+  const mostActiveTwo = _.orderBy(
+    Object.values(resultTwo),
+    "numberOfInspections",
+    "desc"
+  ).slice(0, 2);
+  const monkeyBusinessTwo = mostActiveTwo.reduce(
+    (acc, current) => acc * current.numberOfInspections,
+    1
+  );
+  logAndAssert(monkeyBusinessTwo, 28_537_348_205);
 };
 
 main();
