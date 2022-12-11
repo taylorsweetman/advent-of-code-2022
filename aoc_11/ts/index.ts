@@ -71,21 +71,13 @@ const findReliefValue: ReducerFunc = (num, _) => Math.floor(num / 3);
 
 const findReliefVauleTwo: ReducerFunc = (num, div) => div + (num % div);
 
-const findWorryValue = (formula: string, val: number): number => {
-  const withValInserted = formula
-    .split(" ")
-    .map((part) => (part === "old" ? val : part));
-
-  const parsedFormula: { left: number; op: Operator; right: number } = {
-    left: Number(withValInserted[0]),
-    op: withValInserted[1] as Operator,
-    right: Number(withValInserted[2]),
-  };
-
-  if (parsedFormula.op === "+") return parsedFormula.left + parsedFormula.right;
-
-  return parsedFormula.left * parsedFormula.right;
-};
+const findWorryValue = (formula: string, val: number): number =>
+  eval(
+    formula
+      .split(" ")
+      .map((part) => (part === "old" ? String(val) : part))
+      .join("")
+  );
 
 const runMonkey =
   (worryReducer: ReducerFunc) =>
