@@ -1,21 +1,67 @@
 import { logAndAssert, readInput } from "../../ts_lib";
-import _, { cloneDeep } from "lodash";
+import _ from "lodash";
 
 type Node = {
+  idx: string;
   height: string;
   distanceFromStart: number;
+  traversableNs: string[];
 };
+
 type State = {
-  unvisited: Set<string>;
-  nodeMap: Record<string, Node>;
-  path: string[];
-  startIdx: string;
+  currentNode: Node;
+  unvisited: Record<string, Node>;
   destIdx: string;
+};
+
+const getUpIdx = (idx: string) =>
+  idx.split("|").reduce((acc, current, i) => {
+    if (i === 0) return String(parseInt(current) - 1);
+    return `${acc}|${current}`;
+  }, "");
+
+const getDownIdx = (idx: string) =>
+  idx.split("|").reduce((acc, current, i) => {
+    if (i === 0) return String(parseInt(current) + 1);
+    return `${acc}|${current}`;
+  }, "");
+
+const getRightIdx = (idx: string) =>
+  idx.split("|").reduce((acc, current, i) => {
+    if (i === 0) return current;
+    return `${acc}|${parseInt(current) + 1}`;
+  }, "");
+
+const getLeftIdx = (idx: string) =>
+  idx.split("|").reduce((acc, current, i) => {
+    if (i === 0) return current;
+    return `${acc}|${parseInt(current) - 1}`;
+  }, "");
+
+const canVisit = (current: Node, toVisit: Node) =>
+  toVisit.height.charCodeAt(0) - current.height.charCodeAt(0) <= 1;
+
+const findTraversableNs = (
+  current: Node,
+  nodeMap: Record<string, Node>
+): string[] => {
+  const result: string[] = [];
+
+  const upNode = nodeMap[getUpIdx(current.idx)];
+  const downNode = nodeMap[getDownIdx(current.idx)];
+  const rightNode = nodeMap[getRightIdx(current.idx)];
+  const leftNode = nodeMap[getLeftIdx(current.idx)];
+
+  if (upNode && canVisit(current, upNode)) result.push(upNode.idx);
+  if (downNode && canVisit(current, downNode)) result.push(downNode.idx);
+  if (rightNode && canVisit(current, rightNode)) result.push(rightNode.idx);
+  if (leftNode && canVisit(current, leftNode)) result.push(leftNode.idx);
+
+  return result;
 };
 
 const parse = (input: string): State => {
   const nodeMap: Record<string, Node> = {};
-  const unvisited: Set<string> = new Set();
   let currentIdx = "";
   let destIdx = "";
 
@@ -31,159 +77,85 @@ const parse = (input: string): State => {
       const node: Node = {
         height,
         distanceFromStart,
+        idx: nodeIdx,
+        traversableNs: [],
       };
 
       nodeMap[nodeIdx] = node;
-      unvisited.add(nodeIdx);
       if (start) currentIdx = nodeIdx;
       if (dest) destIdx = nodeIdx;
     })
   );
 
+  const finalMap = Object.entries(nodeMap).reduce((acc, [idx, node]) => {
+    const traversableNs = findTraversableNs(node, nodeMap);
+    const updatedNode = { ...node, traversableNs };
+    return { ...acc, [idx]: updatedNode };
+  }, {} as Record<string, Node>);
+
   return {
-    unvisited,
-    nodeMap,
-    path: [currentIdx],
-    startIdx: currentIdx,
+    unvisited: finalMap,
+    currentNode: finalMap[currentIdx],
     destIdx,
   };
 };
 
-const getUpIdx = (current: string) =>
-  current.split("|").reduce((acc, current, i) => {
-    if (i === 0) return String(parseInt(current) - 1);
-    return `${acc}|${current}`;
-  }, "");
+const findNearestUnvisited = (unvisited: Record<string, Node>): Node =>
+  (_.minBy(
+    Object.entries(unvisited),
+    ([_, node]) => node.distanceFromStart
+  ) ?? ["", {} as Node])[1];
 
-const getDownIdx = (current: string) =>
-  current.split("|").reduce((acc, current, i) => {
-    if (i === 0) return String(parseInt(current) + 1);
-    return `${acc}|${current}`;
-  }, "");
+const runPathfinder = (currentState: State): number => {
+  const { destIdx, unvisited } = currentState;
 
-const getRightIdx = (current: string) =>
-  current.split("|").reduce((acc, current, i) => {
-    if (i === 0) return current;
-    return `${acc}|${parseInt(current) + 1}`;
-  }, "");
+  while (destIdx in unvisited) {
+    const { currentNode } = currentState;
+    if (currentNode.idx === destIdx) return currentNode.distanceFromStart;
 
-const getLeftIdx = (current: string) =>
-  current.split("|").reduce((acc, current, i) => {
-    if (i === 0) return current;
-    return `${acc}|${parseInt(current) - 1}`;
-  }, "");
+    const nodesToCompare = currentNode.traversableNs
+      .filter((nodeIdx) => nodeIdx in unvisited)
+      .map((nodeIdx) => unvisited[nodeIdx]);
 
-const canVisit = (current: Node, toVisit: Node) =>
-  toVisit.height.charCodeAt(0) - current.height.charCodeAt(0) <= 1;
+    delete currentState.unvisited[currentNode.idx];
 
-const runPathfinder = (currentState: State): State => {
-  // TODO: worry about an unreachable destination?
-  const { path, nodeMap, unvisited } = currentState;
-  const currentIdx = _.last(path) ?? currentState.startIdx;
-  const currentNode = nodeMap[currentIdx];
-
-  const upIdx = getUpIdx(currentIdx);
-  const downIdx = getDownIdx(currentIdx);
-  const rightIdx = getRightIdx(currentIdx);
-  const leftIdx = getLeftIdx(currentIdx);
-
-  const canGoUp =
-    upIdx in nodeMap &&
-    canVisit(currentNode, nodeMap[upIdx]) &&
-    unvisited.has(upIdx);
-  const canGoDown =
-    downIdx in nodeMap &&
-    canVisit(currentNode, nodeMap[downIdx]) &&
-    unvisited.has(downIdx);
-  const canGoRight =
-    rightIdx in nodeMap &&
-    canVisit(currentNode, nodeMap[rightIdx]) &&
-    unvisited.has(rightIdx);
-  const canGoLeft =
-    leftIdx in nodeMap &&
-    canVisit(currentNode, nodeMap[leftIdx]) &&
-    unvisited.has(leftIdx);
-
-  if (!(canGoUp || canGoDown || canGoLeft || canGoRight)) {
-    const newState = cloneDeep(currentState);
-    newState.unvisited.delete(currentIdx);
-    newState.path.pop();
-    return newState;
-  }
-
-  const newDist = currentNode.distanceFromStart + 1;
-  const upNode: Node = canGoUp
-    ? {
-        ...nodeMap[upIdx],
-        distanceFromStart: Math.min(newDist, nodeMap[upIdx].distanceFromStart),
-      }
-    : nodeMap[upIdx];
-  const downNode: Node = canGoDown
-    ? {
-        ...nodeMap[downIdx],
-        distanceFromStart: Math.min(
-          newDist,
-          nodeMap[downIdx].distanceFromStart
-        ),
-      }
-    : nodeMap[downIdx];
-  const leftNode: Node = canGoLeft
-    ? {
-        ...nodeMap[leftIdx],
-        distanceFromStart: Math.min(
-          newDist,
-          nodeMap[leftIdx].distanceFromStart
-        ),
-      }
-    : nodeMap[leftIdx];
-  const rightNode: Node = canGoRight
-    ? {
-        ...nodeMap[rightIdx],
-        distanceFromStart: Math.min(
-          newDist,
-          nodeMap[rightIdx].distanceFromStart
-        ),
-      }
-    : nodeMap[rightIdx];
-
-  const closestNodeIdx = _.orderBy(
-    [
-      [upNode, upIdx],
-      [downNode, downIdx],
-      [leftNode, leftIdx],
-      [rightNode, rightIdx],
-    ] as [Node | undefined, string][],
-    ([node, _]) => {
-      if (!node) return Number.MAX_SAFE_INTEGER;
-      return node.distanceFromStart;
+    // no traversable nodes which have not been visited already
+    if (!nodesToCompare.length) {
+      currentState.currentNode = findNearestUnvisited(currentState.unvisited);
+      continue;
     }
-  ).filter(([_, idx]) => unvisited.has(idx))[0][1];
 
-  const newState = cloneDeep(currentState);
-  if (upNode) newState.nodeMap[upIdx] = upNode;
-  if (downNode) newState.nodeMap[downIdx] = downNode;
-  if (leftNode) newState.nodeMap[leftIdx] = leftNode;
-  if (rightNode) newState.nodeMap[rightIdx] = rightNode;
+    const newDist = currentNode.distanceFromStart + 1;
+    const newNodes: Node[] = nodesToCompare.map((node) => ({
+      ...node,
+      distanceFromStart:
+        newDist < node.distanceFromStart ? newDist : node.distanceFromStart,
+    }));
 
-  newState.unvisited.delete(currentIdx);
-  newState.path.push(closestNodeIdx);
+    const closestNewNode = newNodes.reduce(
+      (acc, current) => {
+        if (current.distanceFromStart <= acc.distanceFromStart) return current;
+        return acc;
+      },
+      { distanceFromStart: newDist } as Node
+    );
+    if (closestNewNode.distanceFromStart === Number.MAX_SAFE_INTEGER) {
+      currentState.currentNode = findNearestUnvisited(currentState.unvisited);
+      continue;
+    }
 
-  return newState;
+    newNodes.forEach((node) => {
+      currentState.unvisited[node.idx] = node;
+    });
+    currentState.currentNode = closestNewNode;
+  }
+  return -1;
 };
 
 const main = () => {
   let currentState = parse(readInput(__dirname));
-  while (currentState.unvisited.has(currentState.destIdx)) {
-    currentState = runPathfinder(currentState);
-    console.log(`current unvisited size: ${currentState.unvisited.size}`);
-  }
-  logAndAssert(
-    currentState.nodeMap[currentState.destIdx].distanceFromStart,
-    31
-  );
-  console.log(currentState.path.length);
+  const dist = runPathfinder(currentState);
+  logAndAssert(dist, 423);
 };
 
 main();
-
-// 491 is too high
