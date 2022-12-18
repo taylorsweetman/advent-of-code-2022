@@ -44,6 +44,7 @@ const inCorrectOrder = (
     return true;
   }
 
+  // arrays are order equivalent
   if (currentArray[0].length === 0 && currentArray[1].length === 0) {
     return null;
   }
