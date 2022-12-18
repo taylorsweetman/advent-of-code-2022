@@ -15,7 +15,7 @@ const isNum = (x: any): x is number => !isArr(x) && !isNaN(x);
 const inCorrectOrder = (
   [left, right]: Pair,
   currentArray: Pair = [left, right]
-): boolean => {
+): boolean | null => {
   for (let i = 0; i < left.length; i++) {
     const leftAtI = left[i];
     const rightAtI = right[i];
@@ -33,9 +33,9 @@ const inCorrectOrder = (
     } else if (isArr(leftAtI) && isArr(rightAtI)) {
       return inCorrectOrder([leftAtI, rightAtI], [left, right]);
     } else if (isArr(leftAtI) && !isArr(rightAtI)) {
-      return inCorrectOrder([leftAtI, [rightAtI]]);
+      return inCorrectOrder([leftAtI, [rightAtI]], [left, right]);
     } else if (isArr(rightAtI) && !isArr(leftAtI)) {
-      return inCorrectOrder([[leftAtI], rightAtI]);
+      return inCorrectOrder([[leftAtI], rightAtI], [left, right]);
     }
   }
 
@@ -44,9 +44,16 @@ const inCorrectOrder = (
     return true;
   }
 
+  if (currentArray[0].length === 0 && currentArray[1].length === 0) {
+    return null;
+  }
+
   // both arrays; no decision yet
   return inCorrectOrder([currentArray[0].slice(1), currentArray[1].slice(1)]);
 };
+
+const comparator = (a: Packet[], b: Packet[]) =>
+  inCorrectOrder([a, b]) === null ? 0 : inCorrectOrder([a, b]) ? -1 : 1;
 
 const main = () => {
   const packetPairs = parse(readInput(__dirname));
@@ -56,7 +63,24 @@ const main = () => {
     (acc, pair, idx) => (inCorrectOrder(pair) ? [...acc, idx + 1] : acc),
     [] as number[]
   );
-  logAndAssert(sum(correctOrderPacketIdxs), 6070);
+  logAndAssert(sum(correctOrderPacketIdxs), 6_070);
+
+  // Part 2
+  const dividorPackets: Pair = [[[2]], [[6]]];
+  const allPackets: Packet[][] = [
+    ...packetPairs.flatMap(([left, right]) => [left, right]),
+    ...dividorPackets,
+  ];
+  allPackets.sort(comparator);
+
+  const decoderKey = allPackets.reduce((acc, current, idx) => {
+    if (dividorPackets.includes(current)) {
+      return acc * (idx + 1);
+    }
+
+    return acc;
+  }, 1);
+  logAndAssert(decoderKey, 20_758);
 };
 
 main();
