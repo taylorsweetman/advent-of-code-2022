@@ -12,6 +12,21 @@ const downCoord = (coord: string): string =>
       (acc, curr, idx) => (idx === 0 ? curr : `${acc},${parseInt(curr) + 1}`),
       ""
     );
+const upCoord = (coord: string): string =>
+  coord
+    .split(",")
+    .reduce(
+      (acc, curr, idx) => (idx === 0 ? curr : `${acc},${parseInt(curr) - 1}`),
+      ""
+    );
+const leftCoord = (coord: string): string =>
+  coord
+    .split(",")
+    .reduce(
+      (acc, curr, idx) =>
+        idx === 0 ? `${parseInt(curr) - 1}` : `${acc},${curr}`,
+      ""
+    );
 const rightCoord = (coord: string): string =>
   coord
     .split(",")
@@ -25,7 +40,7 @@ const downLeftCoord = (coord: string): string =>
     .split(",")
     .reduce(
       (acc, curr, idx) =>
-        idx === 0 ? `${parseInt(curr) - 1}` : `${acc},${curr + 1}`,
+        idx === 0 ? `${parseInt(curr) - 1}` : `${acc},${parseInt(curr) + 1}`,
       ""
     );
 const downRightCoord = (coord: string): string =>
@@ -33,7 +48,7 @@ const downRightCoord = (coord: string): string =>
     .split(",")
     .reduce(
       (acc, curr, idx) =>
-        idx === 0 ? `${parseInt(curr) + 1}` : `${acc},${curr + 1}`,
+        idx === 0 ? `${parseInt(curr) + 1}` : `${acc},${parseInt(curr) + 1}`,
       ""
     );
 const getX = (coord: string): number => parseInt(coord.split(",")[0]);
@@ -101,9 +116,64 @@ const parse = (input: string): Cave => {
   return { fullCoords: set, lowestRock: findLowest(set) };
 };
 
+// TODO: replace with findShallowestBelow
+const findClosestBelow = (coord: string, set: Set<string>): string | null => {
+  if (set.has(coord)) return null;
+
+  const startX = getX(coord);
+  const startY = getY(coord);
+
+  const deepestBelowY = [...set].reduce((acc, curr) => {
+    const currentX = getX(curr);
+    const currentY = getY(curr);
+
+    if (currentX !== startX) return acc;
+    if (currentY + 1 < startY) return acc;
+
+    return currentY < acc ? currentY : acc;
+  }, Number.MAX_SAFE_INTEGER);
+
+  return deepestBelowY === Number.MAX_SAFE_INTEGER
+    ? null
+    : upCoord(`${startX},${deepestBelowY}`);
+};
+
+const dropGrain = (coord: string, cave: Cave): string | null => {
+  const { lowestRock, fullCoords } = cave;
+  const downOne = downCoord(coord);
+
+  const downY = getY(downOne);
+
+  if (downY > lowestRock || downY < 0) return null;
+  if (!fullCoords.has(downOne)) return dropGrain(downOne, cave);
+
+  const downAndLeft = downLeftCoord(coord);
+  if (!fullCoords.has(downAndLeft)) return dropGrain(downAndLeft, cave);
+
+  const downAndRight = downRightCoord(coord);
+  if (!fullCoords.has(downAndRight)) return dropGrain(downAndRight, cave);
+
+  return coord;
+};
+
+const runSim = (pourPoint: string, cave: Cave): number => {
+  let newGrain = dropGrain(pourPoint, cave);
+  let count = 0;
+
+  while (newGrain) {
+    count++;
+    cave.fullCoords.add(newGrain);
+    newGrain = dropGrain(pourPoint, cave);
+  }
+
+  return count;
+};
+
 const main = () => {
   const cave = parse(readInput(__dirname));
-  console.log(cave);
+
+  const grains = runSim("500,0", cave);
+  logAndAssert(grains, 737);
 };
 
 main();
