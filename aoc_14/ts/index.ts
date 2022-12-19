@@ -1,4 +1,5 @@
 import { logAndAssert, readInput } from "../../ts_lib";
+import _ from "lodash";
 
 type Cave = {
   lowestRock: number;
@@ -10,21 +11,6 @@ const downCoord = (coord: string): string =>
     .split(",")
     .reduce(
       (acc, curr, idx) => (idx === 0 ? curr : `${acc},${parseInt(curr) + 1}`),
-      ""
-    );
-const upCoord = (coord: string): string =>
-  coord
-    .split(",")
-    .reduce(
-      (acc, curr, idx) => (idx === 0 ? curr : `${acc},${parseInt(curr) - 1}`),
-      ""
-    );
-const leftCoord = (coord: string): string =>
-  coord
-    .split(",")
-    .reduce(
-      (acc, curr, idx) =>
-        idx === 0 ? `${parseInt(curr) - 1}` : `${acc},${curr}`,
       ""
     );
 const rightCoord = (coord: string): string =>
@@ -116,64 +102,75 @@ const parse = (input: string): Cave => {
   return { fullCoords: set, lowestRock: findLowest(set) };
 };
 
-// TODO: replace with findShallowestBelow
-const findClosestBelow = (coord: string, set: Set<string>): string | null => {
-  if (set.has(coord)) return null;
-
-  const startX = getX(coord);
-  const startY = getY(coord);
-
-  const deepestBelowY = [...set].reduce((acc, curr) => {
-    const currentX = getX(curr);
-    const currentY = getY(curr);
-
-    if (currentX !== startX) return acc;
-    if (currentY + 1 < startY) return acc;
-
-    return currentY < acc ? currentY : acc;
-  }, Number.MAX_SAFE_INTEGER);
-
-  return deepestBelowY === Number.MAX_SAFE_INTEGER
-    ? null
-    : upCoord(`${startX},${deepestBelowY}`);
-};
-
-const dropGrain = (coord: string, cave: Cave): string | null => {
+const dropGrainOne = (coord: string, cave: Cave): string | null => {
   const { lowestRock, fullCoords } = cave;
   const downOne = downCoord(coord);
 
   const downY = getY(downOne);
 
   if (downY > lowestRock || downY < 0) return null;
-  if (!fullCoords.has(downOne)) return dropGrain(downOne, cave);
+  if (!fullCoords.has(downOne)) return dropGrainOne(downOne, cave);
 
   const downAndLeft = downLeftCoord(coord);
-  if (!fullCoords.has(downAndLeft)) return dropGrain(downAndLeft, cave);
+  if (!fullCoords.has(downAndLeft)) return dropGrainOne(downAndLeft, cave);
 
   const downAndRight = downRightCoord(coord);
-  if (!fullCoords.has(downAndRight)) return dropGrain(downAndRight, cave);
+  if (!fullCoords.has(downAndRight)) return dropGrainOne(downAndRight, cave);
 
   return coord;
 };
 
-const runSim = (pourPoint: string, cave: Cave): number => {
-  let newGrain = dropGrain(pourPoint, cave);
-  let count = 0;
+const dropGrainTwo = (coord: string, cave: Cave): string | null => {
+  let { lowestRock, fullCoords } = cave;
+  lowestRock += 2;
+  const downOne = downCoord(coord);
 
-  while (newGrain) {
-    count++;
-    cave.fullCoords.add(newGrain);
-    newGrain = dropGrain(pourPoint, cave);
-  }
+  const downY = getY(downOne);
 
-  return count;
+  if (!fullCoords.has(downOne) && downY < lowestRock)
+    return dropGrainTwo(downOne, cave);
+
+  const downAndLeft = downLeftCoord(coord);
+  if (!fullCoords.has(downAndLeft) && downY < lowestRock)
+    return dropGrainTwo(downAndLeft, cave);
+
+  const downAndRight = downRightCoord(coord);
+  if (!fullCoords.has(downAndRight) && downY < lowestRock)
+    return dropGrainTwo(downAndRight, cave);
+
+  if (getY(coord) === 0) return null;
+
+  return coord;
 };
+
+const runSim =
+  (
+    grainDropper: (a: string, b: Cave) => string | null,
+    addOne: boolean = false
+  ) =>
+  (pourPoint: string, cave: Cave): number => {
+    const caveClone = _.cloneDeep(cave);
+    let newGrain = grainDropper(pourPoint, caveClone);
+    let count = 0;
+
+    while (newGrain) {
+      count++;
+      caveClone.fullCoords.add(newGrain);
+      newGrain = grainDropper(pourPoint, caveClone);
+    }
+
+    return addOne ? count + 1 : count;
+  };
 
 const main = () => {
   const cave = parse(readInput(__dirname));
+  const dropPoint = "500,0";
 
-  const grains = runSim("500,0", cave);
-  logAndAssert(grains, 737);
+  // Part 1
+  logAndAssert(runSim(dropGrainOne)(dropPoint, cave), 737);
+
+  // Part 2
+  logAndAssert(runSim(dropGrainTwo, true)(dropPoint, cave), 28_145);
 };
 
 main();
