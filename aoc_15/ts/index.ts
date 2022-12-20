@@ -45,37 +45,38 @@ const parse = (input: string): SensorInfo[] => {
   }));
 };
 
-const findRowTouches =
-  (yIdx: number) =>
-  (sensor: SensorInfo): number[] => {
+const findMinAndMaxTouchesOfRow =
+  (
+    yIdx: number,
+    hardMin: number = Number.MIN_SAFE_INTEGER,
+    hardMax: number = Number.MAX_SAFE_INTEGER
+  ) =>
+  (sensor: SensorInfo): [number, number] => {
     const { sensorLoc, mDist } = sensor;
     const { x: sensorX, y: sensorY } = sensorLoc;
 
     const distanceFromRow = Math.abs(yIdx - sensorY);
     const leftOver = mDist - distanceFromRow;
-    if (leftOver < 0) return [];
+    if (leftOver < 0) return [hardMax, hardMin];
 
-    const min = sensorX - leftOver;
-    const max = sensorX + leftOver;
-    return _.range(min, max + 1);
+    const min = Math.max(sensorX - leftOver, hardMin);
+    const max = Math.min(sensorX + leftOver, hardMax);
+    return [min, max];
   };
 
 const main = () => {
   const sensors = parse(readInput(__dirname));
   const y = 2_000_000;
-  const findTouchesOfRow = findRowTouches(y);
+  const findMinAndMaxAt2Mil = findMinAndMaxTouchesOfRow(y);
 
-  const uniqTouches = new Set(
-    sensors.flatMap((sensor) => findTouchesOfRow(sensor))
+  const rowMinAndMax = sensors.reduce(
+    (acc, current) => {
+      const [currentMin, currentMax] = findMinAndMaxAt2Mil(current);
+      return [Math.min(acc[0], currentMin), Math.max(acc[1], currentMax)];
+    },
+    [Number.MAX_SAFE_INTEGER, Number.MIN_SAFE_INTEGER]
   );
-  const beaconTouches = new Set(
-    sensors
-      .filter(({ beaconLoc }) => beaconLoc.y === y)
-      .map(({ beaconLoc }) => beaconLoc.x)
-  );
-
-  const noBeacon = [...uniqTouches].filter((y) => !beaconTouches.has(y));
-  logAndAssert(noBeacon.length, 5_040_643);
+  logAndAssert(rowMinAndMax[1] - rowMinAndMax[0], 5_040_643);
 };
 
 main();
