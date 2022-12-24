@@ -80,3 +80,37 @@ export class Coord {
     return this.x > max.x || this.y > max.y || this.z > max.z;
   }
 }
+
+const overlap = (left: [number, number], right: [number, number]): boolean =>
+  left[1] >= right[0] || right[1] >= left[0];
+
+const merge = (
+  left: [number, number],
+  right: [number, number]
+): [number, number] => [
+  Math.min(left[0], right[0]),
+  Math.max(left[1], right[1]),
+];
+
+export const mergeAll = (
+  toMerge: [number, number],
+  existing: [number, number][]
+): [number, number][] =>
+  existing
+    .flatMap((current) =>
+      overlap(current, toMerge) ? [merge(current, toMerge)] : [current, toMerge]
+    )
+    .filter(
+      (current, idx, arr) =>
+        !arr.some(
+          (existingCurrent, existingIdx) =>
+            existingIdx > idx &&
+            current[0] === existingCurrent[0] &&
+            current[1] === existingCurrent[1]
+        )
+    );
+
+export const containedCount = (arrs: [number, number][]) =>
+  arrs.reduce((acc, current) => {
+    return acc + (current[1] - current[0]);
+  }, 0);

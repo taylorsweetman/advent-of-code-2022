@@ -1,5 +1,9 @@
-import _ from "lodash";
-import { logAndAssert, readInput } from "../../ts_lib";
+import {
+  containedCount,
+  logAndAssert,
+  mergeAll,
+  readInput,
+} from "../../ts_lib";
 
 type SensorInfo = {
   sensorLoc: Coord;
@@ -57,26 +61,35 @@ const findMinAndMaxTouchesOfRow =
 
     const distanceFromRow = Math.abs(yIdx - sensorY);
     const leftOver = mDist - distanceFromRow;
-    if (leftOver < 0) return [hardMax, hardMin];
+    if (leftOver < 0) return [0, 0];
 
     const min = Math.max(sensorX - leftOver, hardMin);
     const max = Math.min(sensorX + leftOver, hardMax);
     return [min, max];
   };
 
+const findRowTouches =
+  (
+    yIdx: number,
+    hardMin: number = Number.MIN_SAFE_INTEGER,
+    hardMax: number = Number.MAX_SAFE_INTEGER
+  ) =>
+  (sensors: SensorInfo[]): [number, number][] => {
+    const minMaxer = findMinAndMaxTouchesOfRow(yIdx, hardMin, hardMax);
+    return sensors.reduce((acc, current) => mergeAll(minMaxer(current), acc), [
+      [0, 0],
+    ] as [number, number][]);
+  };
+
 const main = () => {
   const sensors = parse(readInput(__dirname));
-  const y = 2_000_000;
-  const findMinAndMaxAt2Mil = findMinAndMaxTouchesOfRow(y);
 
-  const rowMinAndMax = sensors.reduce(
-    (acc, current) => {
-      const [currentMin, currentMax] = findMinAndMaxAt2Mil(current);
-      return [Math.min(acc[0], currentMin), Math.max(acc[1], currentMax)];
-    },
-    [Number.MAX_SAFE_INTEGER, Number.MIN_SAFE_INTEGER]
-  );
-  logAndAssert(rowMinAndMax[1] - rowMinAndMax[0], 5_040_643);
+  // Part 1
+  const y = 2_000_000;
+
+  const rowTouches = findRowTouches(y)(sensors);
+  const rowTouchesCount = containedCount(rowTouches);
+  logAndAssert(rowTouchesCount, 5_040_643);
 };
 
 main();
