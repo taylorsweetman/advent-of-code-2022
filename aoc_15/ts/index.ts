@@ -3,6 +3,7 @@ import {
   logAndAssert,
   mergeAll,
   readInput,
+  Coord,
 } from "../../ts_lib";
 
 type SensorInfo = {
@@ -10,7 +11,6 @@ type SensorInfo = {
   beaconLoc: Coord;
   mDist: number;
 };
-type Coord = { x: number; y: number };
 type CoordPair = [Coord, Coord];
 
 const findMDist = (pair: CoordPair): number =>
@@ -22,23 +22,10 @@ const parse = (input: string): SensorInfo[] => {
     line.split(":").reduce(
       (acc, text, idx) => {
         const matches = text.match(/[0-9-]+/g) ?? [];
-        if (idx === 0)
-          return [
-            {
-              x: parseInt(matches[0] ?? "-1"),
-              y: parseInt(matches[1] ?? "-1"),
-            },
-            { x: -1, y: -1 },
-          ];
-        return [
-          acc[0],
-          { x: parseInt(matches[0] ?? "-1"), y: parseInt(matches[1] ?? "-1") },
-        ];
+        if (idx === 0) return [new Coord(matches.join(",")), acc[1]];
+        return [acc[0], new Coord(matches.join(","))];
       },
-      [
-        { x: -1, y: -1 },
-        { x: -1, y: -1 },
-      ]
+      [new Coord("-1,-1"), new Coord("-1,-1")]
     )
   );
 
