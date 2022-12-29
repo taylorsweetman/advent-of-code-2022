@@ -1,6 +1,6 @@
 #!/bin/zsh
 
-mkdir -p "aoc_$1/ts"
+mkdir -p aoc_$1/ts
 
-touch "aoc_$1/ts/index.ts"
-touch "aoc_$1/input.txt"
+cp template/index.ts aoc_$1/ts/index.ts
+touch aoc_$1/input.txt
