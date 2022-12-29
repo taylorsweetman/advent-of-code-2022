@@ -1,6 +1,7 @@
 import { assert } from "console";
 import { readFileSync } from "fs";
 import { resolve } from "path";
+import _ from "lodash";
 
 export const sum = (arr: number[]) => arr.reduce((a, b) => a + b, 0);
 
@@ -31,6 +32,10 @@ export class Coord {
     this.x = this.arr[0];
     this.y = this.arr[1];
     this.z = this.arr[2];
+  }
+
+  static fromArr(arr: number[]) {
+    return new Coord(arr.join(","));
   }
 
   adjacentCords() {
@@ -81,36 +86,50 @@ export class Coord {
   }
 }
 
-const overlap = (left: [number, number], right: [number, number]): boolean =>
-  left[1] >= right[0] || right[1] >= left[0];
+export type CoordPair = [Coord, Coord];
 
-const merge = (
-  left: [number, number],
-  right: [number, number]
-): [number, number] => [
-  Math.min(left[0], right[0]),
-  Math.max(left[1], right[1]),
-];
+const isBetweenPoints = (num: number, { x, y }: Coord) => num >= x && num <= y;
 
-export const mergeAll = (
-  toMerge: [number, number],
-  existing: [number, number][]
-): [number, number][] =>
-  existing
-    .flatMap((current) =>
-      overlap(current, toMerge) ? [merge(current, toMerge)] : [current, toMerge]
-    )
-    .filter(
-      (current, idx, arr) =>
-        !arr.some(
-          (existingCurrent, existingIdx) =>
-            existingIdx > idx &&
-            current[0] === existingCurrent[0] &&
-            current[1] === existingCurrent[1]
-        )
+export const overlaps = (l: Coord, r: Coord) => {
+  const { x: lStart, y: lEnd } = l;
+  const { x: rStart, y: rEnd } = r;
+  return (
+    isBetweenPoints(lStart - 1, r) ||
+    isBetweenPoints(lEnd + 1, r) ||
+    isBetweenPoints(rStart - 1, l) ||
+    isBetweenPoints(rEnd + 1, l)
+  );
+};
+
+const merge = (left: Coord, right: Coord) =>
+  Coord.fromArr([Math.min(left.x, right.x), Math.max(left.y, right.y)]);
+
+export const mergeAll = (toMerge: Coord, existing: Coord[]): Coord[] => {
+  let mergesToFind = _.uniqBy([toMerge, ...existing], "id");
+  let foundMerges: CoordPair[] = [];
+
+  mergesToFind.forEach((toMerge, outerIdx) => {
+    const mergeIdx = mergesToFind.findIndex(
+      (mergee, innerIdx) => innerIdx > outerIdx && overlaps(toMerge, mergee)
     );
+    if (mergeIdx !== -1) {
+      foundMerges.push([toMerge, mergesToFind[mergeIdx]] as CoordPair);
+      mergesToFind.splice(mergeIdx, 1);
+      mergesToFind.splice(
+        mergesToFind.findIndex((c) => c.id === toMerge.id),
+        1
+      );
+    }
+  });
 
-export const containedCount = (arrs: [number, number][]) =>
-  arrs.reduce((acc, current) => {
-    return acc + (current[1] - current[0]);
-  }, 0);
+  if (foundMerges.length === 0) {
+    return mergesToFind;
+  }
+
+  const newList = [
+    ...mergesToFind,
+    ...foundMerges.map((toMerge) => merge(toMerge[0], toMerge[1])),
+  ];
+
+  return mergeAll(newList[0], newList);
+};
