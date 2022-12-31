@@ -1,4 +1,5 @@
-export type Node<T> = {
-  value: T;
-  weightedConnections: { value: T; weight: number }[];
+export type Node<T, U> = {
+  id: T;
+  value: U;
+  weightedConnections: { id: T; weight: number }[];
 };
