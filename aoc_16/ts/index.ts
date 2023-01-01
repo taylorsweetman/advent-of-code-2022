@@ -118,15 +118,10 @@ const valveIsOpen = (nodeId: string, path: string[]) => {
 const findPathPotential = (time: number, nodeMap: NodeMap, path: string[]) => {
   const remainingTime = time - (path.length - 1);
 
-  const currentPressure = pressureReleasedFromPath(nodeMap)([
+  return pressureReleasedFromPath(nodeMap)([
     ...path,
     ...Array(remainingTime).fill("STAY"),
   ]);
-  const unopenedValves = Object.entries(nodeMap)
-    .filter(([id]) => !valveIsOpen(id, path))
-    .map(([_, node]) => node);
-  const potentialPressure = sum(unopenedValves.map((node) => node.value));
-  return currentPressure + potentialPressure;
 };
 
 const bfs =
@@ -141,6 +136,7 @@ const bfs =
 
     while (queue.length) {
       const path = queue.shift() ?? [];
+      console.log({ q: queue.length, p: path.length });
       if (path.length - 1 === time) {
         const releasedPressure = pressureReleasedFromPath(nodeMap)(path);
         const pathStr = path.join(",");
@@ -148,20 +144,26 @@ const bfs =
         continue;
       }
 
-      const currentPotential = findPathPotential(time, nodeMap, path);
-      if ((bestPaths[path.length] ?? -1) > currentPotential) {
-        continue;
-      } else {
-        bestPaths[path.length] = currentPotential;
-      }
-
       const lastNodeId = path[path.length - 1];
       if (
         lastNodeId !== "OPEN" &&
         lastNodeId !== "STAY" &&
+        nodeMap[lastNodeId]?.value > 0 &&
         !valveIsOpen(lastNodeId, path)
       ) {
         queue.push([...path, "OPEN"]);
+      }
+
+      const currentPotential = findPathPotential(time, nodeMap, path);
+      if ((bestPaths[path.length] ?? 0) <= currentPotential)
+        bestPaths[path.length] = currentPotential;
+
+      const eliminatePath = Object.entries(bestPaths).some(
+        ([len, pot]) => Number(len) > path.length && pot > currentPotential
+      );
+
+      if (eliminatePath) {
+        continue;
       }
 
       if (lastNodeId === "STAY") {
@@ -202,6 +204,9 @@ const main = () => {
   const possiblePaths = bfs(30, nodeMap, shortestPathsMap)([["AA"]]);
   const maxPressure = Math.max(...Object.values(possiblePaths));
   logAndAssert(maxPressure, 1_651);
+  console.log(
+    Object.entries(possiblePaths).filter(([k, v]) => v === maxPressure)
+  );
 
   // Part 2
   // logAndAssert(1, 1);
