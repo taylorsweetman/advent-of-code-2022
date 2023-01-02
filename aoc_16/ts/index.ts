@@ -132,11 +132,8 @@ const bfs =
     possiblePaths: Record<string, number> = {}
   ) =>
   (queue: string[][]): Record<string, number> => {
-    const bestPaths: Record<number, number> = {};
-
     while (queue.length) {
       const path = queue.shift() ?? [];
-      console.log({ q: queue.length, p: path.length });
       if (path.length - 1 === time) {
         const releasedPressure = pressureReleasedFromPath(nodeMap)(path);
         const pathStr = path.join(",");
@@ -145,27 +142,6 @@ const bfs =
       }
 
       const lastNodeId = path[path.length - 1];
-      if (
-        lastNodeId !== "OPEN" &&
-        lastNodeId !== "STAY" &&
-        nodeMap[lastNodeId]?.value > 0 &&
-        !valveIsOpen(lastNodeId, path)
-      ) {
-        queue.push([...path, "OPEN"]);
-      }
-
-      const currentPotential = findPathPotential(time, nodeMap, path);
-      if ((bestPaths[path.length] ?? 0) <= currentPotential)
-        bestPaths[path.length] = currentPotential;
-
-      const eliminatePath = Object.entries(bestPaths).some(
-        ([len, pot]) => Number(len) > path.length && pot > currentPotential
-      );
-
-      if (eliminatePath) {
-        continue;
-      }
-
       if (lastNodeId === "STAY") {
         queue.push([...path, "STAY"]);
         continue;
@@ -178,7 +154,7 @@ const bfs =
         nodeMap[lastNodeIdToUse]?.weightedConnections ?? [];
 
       const reachableNodes = lastNodeConnections.filter((node) => {
-        const remainingTime = time - (path.length - 1);
+        const remainingTime = time - (path.length - 1) - 1;
         return node.weight < remainingTime && !valveIsOpen(node.id, path);
       });
 
@@ -190,6 +166,7 @@ const bfs =
         queue.push([
           ...path,
           ...shortestPathsMap[`${lastNodeIdToUse}->${id}`].slice(1),
+          "OPEN",
         ]);
       });
     }
@@ -203,10 +180,7 @@ const main = () => {
   // Part 1
   const possiblePaths = bfs(30, nodeMap, shortestPathsMap)([["AA"]]);
   const maxPressure = Math.max(...Object.values(possiblePaths));
-  logAndAssert(maxPressure, 1_651);
-  console.log(
-    Object.entries(possiblePaths).filter(([k, v]) => v === maxPressure)
-  );
+  logAndAssert(maxPressure, 1_638);
 
   // Part 2
   // logAndAssert(1, 1);
